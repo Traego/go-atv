@@ -3,6 +3,7 @@ package companion_test
 import (
 	"context"
 	"errors"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -272,7 +273,7 @@ func TestMedia(t *testing.T) {
 		t.Fatalf("skip: %v, position %v", err, s.State().Position)
 	}
 	v, err := c.Volume(ctx)
-	if err != nil || v != 10 {
+	if err != nil || math.Abs(v-10) > 0.0001 {
 		t.Fatalf("volume %v %v", v, err)
 	}
 	if err := c.SetVolume(ctx, 42); err != nil || s.State().Volume != 42 {
@@ -362,5 +363,29 @@ func TestCloseStopsTheSession(t *testing.T) {
 	}
 	if st.Interests[companion.EventMediaControls] {
 		t.Error("still subscribed")
+	}
+}
+
+func TestVolumeFloatWidths(t *testing.T) {
+	for _, single := range []bool{true, false} {
+		name := "float64"
+		if single {
+			name = "float32"
+		}
+		t.Run(name, func(t *testing.T) {
+			s := newServer(t)
+			s.VolumeFloat32 = single
+			c := dial(t, s)
+			ctx := testContext(t)
+			for _, percent := range []float64{0, 20, 42, 100} {
+				if err := c.SetVolume(ctx, percent); err != nil {
+					t.Fatal(err)
+				}
+				got, err := c.Volume(ctx)
+				if err != nil || math.Abs(got-percent) > 0.0001 {
+					t.Fatalf("volume at %v: got %v, error %v", percent, got, err)
+				}
+			}
+		})
 	}
 }

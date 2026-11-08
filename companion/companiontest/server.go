@@ -35,6 +35,9 @@ type Server struct {
 	// StatusSupported says whether FetchAttentionState is answered. Newer
 	// tvOS versions do not.
 	StatusSupported bool
+	// VolumeFloat32 encodes volume with the single precision used by real devices.
+	// Set it before connecting; New enables it by default.
+	VolumeFloat32 bool
 	// Drop names requests the server never answers, to test timeouts.
 	Drop map[string]bool
 
@@ -99,6 +102,7 @@ func New() (*Server, error) {
 		Apps:            map[string]string{},
 		Accounts:        map[string]string{},
 		StatusSupported: true,
+		VolumeFloat32:   true,
 		Drop:            map[string]bool{},
 		ln:              ln,
 		key:             key,
@@ -499,6 +503,9 @@ func (c *conn) media(msg, content map[string]any) {
 		c.volume(v * 100)
 	case companion.MediaGetVolume:
 		out["_vol"] = s.state.Volume / 100
+		if s.VolumeFloat32 {
+			out["_vol"] = float32(s.state.Volume / 100)
+		}
 	case companion.MediaSkipBy:
 		by, _ := content["_skpS"].(float64)
 		s.state.Position = max(0, s.state.Position+by)

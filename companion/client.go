@@ -436,11 +436,16 @@ func (c *Client) Volume(ctx context.Context) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	v, ok := content["_vol"].(float64)
-	if !ok {
+	// OPACK preserves the wire precision. Real devices use float32, while
+	// other implementations may send float64.
+	switch v := content["_vol"].(type) {
+	case float32:
+		return float64(v) * 100, nil
+	case float64:
+		return v * 100, nil
+	default:
 		return 0, errors.New("companion: volume missing from response")
 	}
-	return v * 100, nil
 }
 
 // SetVolume sets the volume as a percentage.
