@@ -38,6 +38,9 @@ type Server struct {
 	// VolumeFloat32 encodes volume with the single precision used by real devices.
 	// Set it before connecting; New enables it by default.
 	VolumeFloat32 bool
+	// SuppressVolumeEvents omits media-control pushes after volume changes,
+	// for devices whose volume must be polled. Set it before connecting.
+	SuppressVolumeEvents bool
 	// Drop names requests the server never answers, to test timeouts.
 	Drop map[string]bool
 
@@ -490,7 +493,9 @@ func (c *conn) hid(msg, content map[string]any) {
 
 func (c *conn) volume(v float64) {
 	c.s.state.Volume = min(max(v, 0), 100)
-	go c.sendEvent(companion.EventMediaControls, map[string]any{"_mcF": int64(companion.MediaControlVolume)})
+	if !c.s.SuppressVolumeEvents {
+		go c.sendEvent(companion.EventMediaControls, map[string]any{"_mcF": int64(companion.MediaControlVolume)})
+	}
 }
 
 func (c *conn) media(msg, content map[string]any) {
